@@ -22,6 +22,7 @@ def paginate_questions(request, selection):
 def create_app(test_config=None):
     # create and configure the app
     app = Flask(__name__)
+    app.config.from_object('config')
     app.app_context().push()
     setup_db(app)
 
