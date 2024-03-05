@@ -3,13 +3,12 @@ from flask import Flask, request, abort, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import random
-
+from dotenv import load_dotenv
 import werkzeug
-
-
 from models import setup_db, Question, Category
 
 QUESTIONS_PER_PAGE = 10
+
 
 def paginate_questions(request, selection):
     page = request.args.get('page', 1, type=int)
@@ -22,9 +21,14 @@ def paginate_questions(request, selection):
 
 
 def create_app(test_config=None):
+
     # create and configure the app
     app = Flask(__name__)
-    app.config.from_object('config')
+    load_dotenv()
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
+        "SQLALCHEMY_DATABASE_URI")
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = os.getenv(
+        "SQLALCHEMY_TRACK_MODIFICATIONS")
     app.app_context().push()
     setup_db(app)
 
@@ -33,14 +37,15 @@ def create_app(test_config=None):
     """
     cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-   
     """
     @TODO: Use the after_request decorator to set Access-Control-Allow
     """
     @app.after_request
     def after_request(response):
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,true')
-        response.headers.add('Access-Control-Allow-Methods', 'GET,PATCH,POST,DELETE,OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers',
+                             'Content-Type,Authorization,true')
+        response.headers.add('Access-Control-Allow-Methods',
+                             'GET,PATCH,POST,DELETE,OPTIONS')
         response.headers.add("Access-Control-Allow-Origin", "*")
         return response
 
@@ -50,18 +55,18 @@ def create_app(test_config=None):
     for all available categories.
     """
     @app.route("/categories", methods=['GET'])
-
     def getCategories():
-        try: 
+        try:
             categories = Category.query.all()
-            formatted_categories  = {category.id: category.type for category in categories}
-            
+            formatted_categories = {
+                category.id: category.type for category in categories}
+
             # Check if there are no categories
             if categories is None:
                 abort(404)
             return jsonify({
-                    'success': True,
-                    'categories': formatted_categories
+                'success': True,
+                'categories': formatted_categories
             })
         except Exception as error:
             print(error)
@@ -80,7 +85,6 @@ def create_app(test_config=None):
     Clicking on the page numbers should update the questions.
     """
     @app.route('/questions', methods=['GET'])
-
     def getQuestions():
         try:
             # Retrieve all questions
@@ -98,13 +102,14 @@ def create_app(test_config=None):
 
             # Retrieve all categories
             all_categories = Category.query.all()
-            formatted_categories = {category.id: category.type for category in all_categories}
+            formatted_categories = {
+                category.id: category.type for category in all_categories}
 
             return jsonify({
-            'success': True,
-            'questions': selected_questions,
-            'total_questions': total_questions,
-            'categories': formatted_categories
+                'success': True,
+                'questions': selected_questions,
+                'total_questions': total_questions,
+                'categories': formatted_categories
             })
 
         except Exception as error:
@@ -139,8 +144,6 @@ def create_app(test_config=None):
         except Exception as error:
             print(error)
             abort(404)
-
-
 
     """
     @TODO:
@@ -186,13 +189,11 @@ def create_app(test_config=None):
                 'created': new_question.id,
                 'questions': paginated_questions,
                 'total_questions': len(all_questions)
-                })
+            })
 
         except Exception as error:
             print(error)
             abort(422)
-
-
 
     """
     @TODO:
@@ -216,7 +217,8 @@ def create_app(test_config=None):
                 Question.question.ilike(f'%'+search_term+'%')).all()
 
             if matching_questions:
-                paginated_questions = paginate_questions(request, matching_questions)
+                paginated_questions = paginate_questions(
+                    request, matching_questions)
 
                 return jsonify({
                     'success': True,
@@ -226,7 +228,7 @@ def create_app(test_config=None):
             else:
                 abort(404)
         except werkzeug.exceptions.NotFound:
-                abort(404)
+            abort(404)
         except Exception as error:
             print(error)
             abort(500)
@@ -246,9 +248,11 @@ def create_app(test_config=None):
             category = Question.query.filter_by(category=C_id).all()
             if len(category) > 0:
                 # Query questions in the specified category
-                questions_in_category = Question.query.filter_by(category=C_id).all()
+                questions_in_category = Question.query.filter_by(
+                    category=C_id).all()
                 # Paginate the questions in the category
-                paginated_questions = paginate_questions(request, questions_in_category)
+                paginated_questions = paginate_questions(
+                    request, questions_in_category)
                 print('in ')
                 category_type = Category.query.get(C_id).type
 
@@ -261,12 +265,10 @@ def create_app(test_config=None):
             else:
                 abort(404)
         except werkzeug.exceptions.NotFound:
-                abort(404)
+            abort(404)
         except Exception as error:
             print(error)
             abort(500)
-    
-
 
     """
     @TODO:
@@ -280,7 +282,6 @@ def create_app(test_config=None):
     and shown whether they were correct or not.
     """
     @app.route('/quizzes', methods=['POST'])
-    
     def start_quiz():
         try:
             body = request.get_json()
@@ -292,16 +293,17 @@ def create_app(test_config=None):
                 abort(422)
             # Determine the questions based on the quiz category
             category_id = int(quiz_category['id']) + 1
-            print(category_id)
+            # print(category_id)
             questions = Question.query.filter(
                 Question.category == category_id,
-                Question.question.not_in([previous_questions])  
+                Question.question.not_in([previous_questions])
             ).all()
             # print(questions)
 
             # Select a random question from the filtered set
-            selected_question = random.choice(questions).format() if questions else None
-            print(selected_question)
+            selected_question = random.choice(
+                questions).format() if questions else None
+            # print(selected_question)
 
             return jsonify({
                 'success': True,
@@ -311,8 +313,6 @@ def create_app(test_config=None):
         except Exception as error:
             print(error)
             abort(404)
-
-
 
     """
     @TODO:
