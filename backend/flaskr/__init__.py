@@ -287,23 +287,33 @@ def create_app(test_config=None):
             body = request.get_json()
             previous_questions = body.get('previous_questions')
             quiz_category = body.get('quiz_category')
-
+            tempQuestList = []
+            
+            for q in previous_questions:
+                tempQuestList.append(Question.query.get(q).question)
+            #print(tempQuestList)
             # Check if the quiz_category is missing
             if not quiz_category:
                 abort(422)
             # Determine the questions based on the quiz category
-            category_id = int(quiz_category['id']) + 1
-            # print(category_id)
-            questions = Question.query.filter(
-                Question.category == category_id,
-                Question.question.not_in([previous_questions])
-            ).all()
-            # print(questions)
+            if quiz_category['id'] == 0 :
+                category_id = int(quiz_category['id']) 
+                questions = Question.query.filter(
+                    Question.question.not_in(tempQuestList)
+                ).all()
+                #print (questions)
+            else:
+                category_id = int(quiz_category['id'])
+                questions = Question.query.filter(
+                    Question.category == category_id,
+                    Question.question.not_in(tempQuestList) 
+                ).all()
+                
 
             # Select a random question from the filtered set
             selected_question = random.choice(
                 questions).format() if questions else None
-            # print(selected_question)
+          
 
             return jsonify({
                 'success': True,
